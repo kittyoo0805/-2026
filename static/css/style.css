@@ -1,0 +1,213 @@
+/* ===== Reset ===== */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 16px;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #f0f2f5;
+    color: #333;
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+/* ===== Navbar ===== */
+.navbar {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    padding: 0 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.nav-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+}
+
+.nav-brand {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.nav-menu {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.nav-welcome {
+    font-size: 0.95rem;
+    opacity: 0.9;
+}
+
+.nav-link {
+    color: #fff;
+    text-decoration: none;
+    font-size: 0.95rem;
+    padding: 6px 16px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    transition: background 0.2s;
+}
+
+.nav-link:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* ===== Container ===== */
+.container {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+/* ===== Card ===== */
+.card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    padding: 32px;
+    margin-bottom: 24px;
+}
+
+.card-center {
+    text-align: center;
+}
+
+.card-title {
+    font-size: 1.3rem;
+    color: #333;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #667eea;
+}
+
+.card-text {
+    font-size: 1rem;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.card-actions {
+    margin-top: 16px;
+}
+
+/* ===== Form ===== */
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 6px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #d9d9d9;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+    outline: none;
+}
+
+.form-group input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.login-form {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+/* ===== Button ===== */
+.btn {
+    display: inline-block;
+    padding: 10px 28px;
+    font-size: 0.95rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: opacity 0.2s, transform 0.1s;
+}
+
+.btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.btn-primary {
+    background: #667eea;
+    color: #fff;
+    width: 100%;
+    font-weight: 600;
+    letter-spacing: 2px;
+}
+
+.btn-danger {
+    background: #e74c3c;
+    color: #fff;
+}
+
+/* ===== Alert ===== */
+.alert {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 18px;
+    font-size: 0.9rem;
+}
+
+.alert-error {
+    background: #fff2f0;
+    border: 1px solid #ffccc7;
+    color: #cf1322;
+}
+
+/* ===== User Info Table ===== */
+.user-info {
+    margin: 8px 0;
+}
+
+.info-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.info-table tr {
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.info-table tr:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    width: 120px;
+    padding: 12px 16px 12px 0;
+    font-weight: 600;
+    color: #555;
+    font-size: 0.9rem;
+}
+
+.info-value {
+    padding: 12px 0;
+    color: #333;
+    font-size: 0.95rem;
+}
