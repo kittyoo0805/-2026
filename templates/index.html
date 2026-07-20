@@ -1,78 +1,59 @@
-{% extends "base.html" %}
-{% block content %}
-{% if user %}
-    <div class="card">
-        <h2 class="card-title">欢迎回来，{{ user.username }}！</h2>
-        <div class="user-info">
-            <table class="info-table">
-                <tr>
-                    <td class="info-label">用户名</td>
-                    <td class="info-value">{{ user.username }}</td>
-                </tr>
-                <tr>
-                    <td class="info-label">角色</td>
-                    <td class="info-value">{{ user.role }}</td>
-                </tr>
-                <tr>
-                    <td class="info-label">邮箱</td>
-                    <td class="info-value">{{ user.email }}</td>
-                </tr>
-                <tr>
-                    <td class="info-label">手机</td>
-                    <td class="info-value">{{ user.phone }}</td>
-                </tr>
-                <tr>
-                    <td class="info-label">余额</td>
-                    <td class="info-value">¥{{ user.balance }}</td>
-                </tr>
-            </table>
-        </div>
-    </div>
-
-    <!-- 搜索用户 -->
-    <div class="card">
-        <h2 class="card-title">搜索用户</h2>
-        <form method="GET" action="/search" class="search-form">
-            <div class="form-group search-group">
-                <input type="text" id="keyword" name="keyword" placeholder="输入用户名或邮箱搜索..." value="{{ search_keyword or '' }}">
-                <button type="submit" class="btn btn-primary">搜索</button>
-            </div>
-        </form>
-
-        {% if search_keyword %}
-            <div class="search-results">
-                <h3>搜索结果：关键词 "{{ search_keyword }}"</h3>
-                {% if search_results %}
-                    <table class="info-table search-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>用户名</th>
-                                <th>邮箱</th>
-                                <th>手机</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for r in search_results %}
-                            <tr>
-                                <td>{{ r.id }}</td>
-                                <td>{{ r.username }}</td>
-                                <td>{{ r.email }}</td>
-                                <td>{{ r.phone }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>用户管理系统</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">用户管理系统</div>
+            <div class="nav-menu">
+                {% if user %}
+                    <span class="nav-welcome">欢迎，{{ user.username }}</span>
+                    <a href="/logout" class="nav-link">退出</a>
                 {% else %}
-                    <p class="no-results">无搜索结果</p>
+                    <a href="/login" class="nav-link">登录</a>
                 {% endif %}
             </div>
+        </div>
+    </nav>
+    <main class="container">
+        {% if user %}
+            <div class="card">
+                <h2 class="card-title">欢迎回来，{{ user.username }}！</h2>
+                <div class="user-info">
+                    <table class="info-table">
+                        <tr>
+                            <td class="info-label">用户名</td>
+                            <td class="info-value">{{ user.username }}</td>
+                        </tr>
+                        <tr>
+                            <td class="info-label">角色</td>
+                            <td class="info-value">{{ user.role }}</td>
+                        </tr>
+                        <tr>
+                            <td class="info-label">邮箱</td>
+                            <td class="info-value">{{ user.email }}</td>
+                        </tr>
+                        <tr>
+                            <td class="info-label">手机</td>
+                            <td class="info-value">{{ user.phone }}</td>
+                        </tr>
+                        <tr>
+                            <td class="info-label">余额</td>
+                            <td class="info-value">¥{{ user.balance }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        {% else %}
+            <div class="card">
+                <h2 class="card-title">欢迎访问用户管理系统</h2>
+                <p>请先 <a href="/login">登录</a>。</p>
+            </div>
         {% endif %}
-    </div>
-{% else %}
-    <div class="card">
-        <h2 class="card-title">欢迎访问用户管理系统</h2>
-        <p>请先 <a href="/login">登录</a> 或 <a href="/register">注册</a>。</p>
-    </div>
-{% endif %}
-{% endblock %}
+    </main>
+</body>
+</html>
