@@ -159,17 +159,6 @@ body {
     width: 100%;
     font-weight: 600;
     letter-spacing: 2px;
-    padding: 10px 28px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.95rem;
-    transition: opacity 0.2s;
-}
-
-.btn-primary:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
 }
 
 .btn-danger {

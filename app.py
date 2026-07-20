@@ -173,7 +173,7 @@ def login():
         user = USERS.get(username)
         if user and check_password_hash(user["password_hash"], password):
             session["username"] = username
-            return render_template("index.html", user=user)
+            return redirect("/")
 
         # 再查 SQLite 数据库（注册用户，明文密码）
         conn = sqlite3.connect(DB_PATH)
@@ -183,14 +183,7 @@ def login():
             row = c.fetchone()
             if row and row[1] == password:  # 明文比对
                 session["username"] = username
-                user_data = {
-                    "username": row[0],
-                    "role": "user",
-                    "email": row[2],
-                    "phone": row[3],
-                    "balance": 0
-                }
-                return render_template("index.html", user=user_data)
+                return redirect("/")
         finally:
             conn.close()
 
