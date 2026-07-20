@@ -15,6 +15,7 @@
                     <a href="/logout" class="nav-link">退出</a>
                 {% else %}
                     <a href="/login" class="nav-link">登录</a>
+                    <a href="/register" class="nav-link">注册</a>
                 {% endif %}
             </div>
         </div>
@@ -48,10 +49,51 @@
                     </table>
                 </div>
             </div>
-        {% else %}
+
+            <!-- 搜索用户 -->
             <div class="card">
+                <h2 class="card-title">搜索用户</h2>
+                <form method="GET" action="/" class="search-form">
+                    <div class="search-group">
+                        <input type="text" name="keyword" placeholder="输入用户名或邮箱搜索..." value="{{ search_keyword or '' }}">
+                        <button type="submit" class="btn btn-search">搜索</button>
+                    </div>
+                </form>
+
+                {% if search_keyword %}
+                    <div class="search-results">
+                        <h3>搜索结果：关键词 "{{ search_keyword }}"</h3>
+                        {% if search_results %}
+                            <table class="info-table search-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>用户名</th>
+                                        <th>邮箱</th>
+                                        <th>手机</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for r in search_results %}
+                                    <tr>
+                                        <td>{{ r.id }}</td>
+                                        <td>{{ r.username }}</td>
+                                        <td>{{ r.email }}</td>
+                                        <td>{{ r.phone }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% else %}
+                            <p class="no-results">无搜索结果</p>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="card card-center">
                 <h2 class="card-title">欢迎访问用户管理系统</h2>
-                <p>请先 <a href="/login">登录</a>。</p>
+                <p class="card-text">请先 <a href="/login">登录</a> 或 <a href="/register">注册</a>。</p>
             </div>
         {% endif %}
     </main>

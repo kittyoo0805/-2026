@@ -159,6 +159,17 @@ body {
     width: 100%;
     font-weight: 600;
     letter-spacing: 2px;
+    padding: 10px 28px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: opacity 0.2s;
+}
+
+.btn-primary:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
 }
 
 .btn-danger {
@@ -178,6 +189,74 @@ body {
     background: #fff2f0;
     border: 1px solid #ffccc7;
     color: #cf1322;
+}
+
+.alert-success {
+    background: #f6ffed;
+    border: 1px solid #b7eb8f;
+    color: #389e0d;
+}
+
+/* ===== Search ===== */
+.search-group {
+    display: flex;
+    gap: 10px;
+}
+
+.search-group input {
+    flex: 1;
+}
+
+.btn-search {
+    background: #667eea;
+    color: #fff;
+    padding: 10px 24px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: opacity 0.2s;
+    flex-shrink: 0;
+}
+
+.btn-search:hover {
+    opacity: 0.9;
+}
+
+.search-results {
+    margin-top: 20px;
+}
+
+.search-results h3 {
+    font-size: 1rem;
+    color: #555;
+    margin-bottom: 12px;
+}
+
+.search-table {
+    margin-top: 8px;
+}
+
+.search-table thead th {
+    background: #f8f9fc;
+    padding: 10px 12px;
+    font-weight: 600;
+    color: #555;
+    font-size: 0.9rem;
+    text-align: left;
+    border-bottom: 2px solid #667eea;
+}
+
+.search-table tbody td {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.no-results {
+    color: #999;
+    font-size: 0.95rem;
+    padding: 12px 0;
 }
 
 /* ===== User Info Table ===== */
@@ -210,4 +289,22 @@ body {
     padding: 12px 0;
     color: #333;
     font-size: 0.95rem;
+}
+
+/* ===== Form Footer ===== */
+.form-footer {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.form-footer a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.form-footer a:hover {
+    text-decoration: underline;
 }
