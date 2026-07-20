@@ -111,6 +111,24 @@ def index():
     username = session.get("username")
     user = USERS.get(username)
 
+    # 如果不在内存字典中，从 SQLite 查询注册用户
+    if not user and username:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        try:
+            c.execute("SELECT username, email, phone FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row:
+                user = {
+                    "username": row[0],
+                    "role": "user",
+                    "email": row[1],
+                    "phone": row[2],
+                    "balance": 0
+                }
+        finally:
+            conn.close()
+
     # 如果带搜索参数，调用搜索功能
     keyword = request.args.get("keyword", "").strip()
     search_results = []
@@ -151,16 +169,33 @@ def login():
         if not check_login_limit(client_ip):
             return render_template("login.html", error="登录尝试过于频繁，请 60 秒后再试"), 429
 
-        # 修复4：哈希验证，而非明文比对
+        # 先查内存字典（admin/alice，哈希密码）
         user = USERS.get(username)
         if user and check_password_hash(user["password_hash"], password):
             session["username"] = username
             return render_template("index.html", user=user)
 
+        # 再查 SQLite 数据库（注册用户，明文密码）
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        try:
+            c.execute("SELECT username, password, email, phone FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row and row[1] == password:  # 明文比对
+                session["username"] = username
+                user_data = {
+                    "username": row[0],
+                    "role": "user",
+                    "email": row[2],
+                    "phone": row[3],
+                    "balance": 0
+                }
+                return render_template("index.html", user=user_data)
+        finally:
+            conn.close()
+
         record_failed_login(client_ip)
-        success = request.args.get("success", "")
-        error = "用户名或密码错误"
-        return render_template("login.html", error=error, success=success)
+        return render_template("login.html", error="用户名或密码错误")
 
     success = request.args.get("success", "")
     return render_template("login.html", success=success)
