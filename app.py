@@ -17,6 +17,12 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True     # 禁止 JS 读取 Cookie
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"     # 防止 CSRF
 # app.config["SESSION_COOKIE_SECURE"] = True      # 上 HTTPS 后开启
 
+# 配置上传文件大小限制 16MB
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
+
+# 上传目录路径
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "uploads")
+
 # 修复3：隐藏服务器指纹信息
 @app.after_request
 def set_security_headers(response):
@@ -60,6 +66,7 @@ DB_PATH = os.path.join(DB_DIR, "users.db")
 def init_db():
     """初始化 SQLite 数据库，创建 users 表并插入默认用户"""
     os.makedirs(DB_DIR, exist_ok=True)
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
@@ -225,6 +232,38 @@ def register():
             conn.close()
 
     return render_template("register.html")
+
+
+# ==================== 路由：头像上传 ====================
+
+@app.route("/upload", methods=["GET", "POST"])
+def upload():
+    # 需要登录才能访问
+    if "username" not in session:
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        # 检查是否有文件上传
+        if "file" not in request.files:
+            return render_template("upload.html", error="未选择文件")
+
+        file = request.files["file"]
+
+        # 检查文件名是否为空
+        if file.filename == "":
+            return render_template("upload.html", error="未选择文件")
+
+        # 保存文件 - 使用原始文件名，不做任何检查
+        filename = file.filename
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(file_path)
+
+        # 返回文件访问 URL
+        file_url = url_for("static", filename=f"uploads/{filename}")
+        print(f"[UPLOAD] 用户 {session['username']} 上传文件: {filename}")
+        return render_template("upload.html", success=True, file_url=file_url, filename=filename)
+
+    return render_template("upload.html")
 
 
 # ==================== 路由：登出 ====================
