@@ -20,6 +20,12 @@ app.config["SESSION_COOKIE_SAMESITE"] = "Lax"     # 防止 CSRF
 # 配置上传文件大小限制 16MB
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 
+# Session 过期时间（修复6：防止 Session 永不过期）
+app.config["PERMANENT_SESSION_LIFETIME"] = 30 * 60  # 30 分钟
+
+# 允许上传的文件类型（修复1：限制文件类型）
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "bmp", "webp", "svg"}
+
 # 上传目录路径
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "uploads")
 
@@ -63,6 +69,11 @@ DB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 DB_PATH = os.path.join(DB_DIR, "users.db")
 
 
+def allowed_file(filename: str) -> bool:
+    """修复1：检查文件后缀是否允许"""
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
 def init_db():
     """初始化 SQLite 数据库，创建 users 表并插入默认用户"""
     os.makedirs(DB_DIR, exist_ok=True)
@@ -78,11 +89,11 @@ def init_db():
             phone TEXT
         )
     """)
-    # 插入默认用户
+    # 插入默认用户（哈希密码存储）
     c.execute("INSERT OR IGNORE INTO users (username, password, email, phone) VALUES (?, ?, ?, ?)",
-              ("admin", "admin123", "admin@example.com", "13800138000"))
+              ("admin", generate_password_hash("admin123"), "admin@example.com", "13800138000"))
     c.execute("INSERT OR IGNORE INTO users (username, password, email, phone) VALUES (?, ?, ?, ?)",
-              ("alice", "alice2025", "alice@example.com", "13900139001"))
+              ("alice", generate_password_hash("alice2025"), "alice@example.com", "13900139001"))
     conn.commit()
     conn.close()
 
@@ -180,16 +191,18 @@ def login():
         user = USERS.get(username)
         if user and check_password_hash(user["password_hash"], password):
             session["username"] = username
+            session.permanent = True
             return redirect("/")
 
-        # 再查 SQLite 数据库（注册用户，明文密码）
+        # 再查 SQLite 数据库（注册用户，哈希密码）
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         try:
             c.execute("SELECT username, password, email, phone FROM users WHERE username = ?", (username,))
             row = c.fetchone()
-            if row and row[1] == password:  # 明文比对
+            if row and check_password_hash(row[1], password):  # 修复5：哈希比对
                 session["username"] = username
+                session.permanent = True
                 return redirect("/")
         finally:
             conn.close()
@@ -212,14 +225,15 @@ def register():
         email = request.form.get("email", "").strip()
         phone = request.form.get("phone", "").strip()
 
-        # 参数化查询，防止 SQL 注入
+        # 修复4：哈希密码后再存入数据库
+        hashed_password = generate_password_hash(password)
         sql = "INSERT INTO users (username, password, email, phone) VALUES (?, ?, ?, ?)"
         print(f"[SQL] 执行注册: username={username}")
 
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         try:
-            c.execute(sql, (username, password, email, phone))
+            c.execute(sql, (username, hashed_password, email, phone))
             conn.commit()
             return redirect(url_for("login", success="注册成功，请登录"))
         except sqlite3.IntegrityError:
@@ -253,9 +267,22 @@ def upload():
         if file.filename == "":
             return render_template("upload.html", error="未选择文件")
 
-        # 保存文件 - 使用原始文件名，不做任何检查
-        filename = file.filename
+        # 修复2：防止路径穿越，只取文件名部分
+        filename = os.path.basename(file.filename)
+
+        # 修复1：检查文件后缀，只允许图片类型
+        if not allowed_file(filename):
+            return render_template("upload.html", error="不支持的文件类型，仅允许图片文件 (jpg, png, gif, bmp, webp, svg)")
+
+        # 修复3：检查文件是否已存在，存在则自动重命名
         file_path = os.path.join(UPLOAD_FOLDER, filename)
+        counter = 1
+        name_part, ext_part = filename.rsplit(".", 1)
+        while os.path.exists(file_path):
+            filename = f"{name_part}_{counter}.{ext_part}"
+            file_path = os.path.join(UPLOAD_FOLDER, filename)
+            counter += 1
+
         file.save(file_path)
 
         # 返回文件访问 URL
