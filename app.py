@@ -320,19 +320,8 @@ def profile():
 
     current_username = session["username"]
 
-    # 从 URL 参数获取 user_id；如果没传则自动从数据库查询当前用户的 ID
+    # 从 URL 参数获取 user_id
     user_id = request.args.get("user_id")
-
-    if not user_id:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        try:
-            c.execute("SELECT id FROM users WHERE username = ?", (current_username,))
-            row = c.fetchone()
-            if row:
-                user_id = str(row[0])
-        finally:
-            conn.close()
 
     if not user_id:
         return render_template("profile.html", error="请提供用户 ID")
