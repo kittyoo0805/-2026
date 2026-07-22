@@ -171,15 +171,15 @@ def index():
     search_keyword = ""
 
     if keyword and username:
-        # 修复6：参数化查询，防止 SQL 注入
-        sql = "SELECT id, username, email, phone FROM users WHERE username LIKE ? OR email LIKE ?"
+        # 修复：只搜索当前登录用户自己的信息（防止搜索他人隐私）
+        sql = "SELECT id, username, email, phone FROM users WHERE username = ? AND (username LIKE ? OR email LIKE ?)"
         like_pattern = f"%{keyword}%"
         print(f"[SQL] 执行搜索: keyword={keyword}")
 
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         try:
-            c.execute(sql, (like_pattern, like_pattern))
+            c.execute(sql, (username, like_pattern, like_pattern))
             rows = c.fetchall()
             search_results = [{"id": r[0], "username": r[1], "email": r[2], "phone": r[3]} for r in rows]
         except Exception as e:
