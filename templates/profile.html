@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}用户管理系统 - 个人中心{% endblock %}
+{% block content %}
+{% if error %}
+    <div class="card">
+        <h2 class="card-title">个人中心</h2>
+        <div class="alert alert-error">{{ error }}</div>
+        <div class="card-actions">
+            <a href="/" class="btn btn-primary">返回首页</a>
+        </div>
+    </div>
+{% elif user_info %}
+    <div class="card">
+        <h2 class="card-title">个人中心</h2>
+        <div class="user-info">
+            <table class="info-table">
+                <tr>
+                    <td class="info-label">用户 ID</td>
+                    <td class="info-value">{{ user_info.id }}</td>
+                </tr>
+                <tr>
+                    <td class="info-label">用户名</td>
+                    <td class="info-value">{{ user_info.username }}</td>
+                </tr>
+                <tr>
+                    <td class="info-label">邮箱</td>
+                    <td class="info-value">{{ user_info.email }}</td>
+                </tr>
+                <tr>
+                    <td class="info-label">手机</td>
+                    <td class="info-value">{{ user_info.phone }}</td>
+                </tr>
+                <tr>
+                    <td class="info-label">余额</td>
+                    <td class="info-value">¥{{ "%.2f"|format(user_info.balance) }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2 class="card-title">充值</h2>
+        <form method="POST" action="/recharge" class="login-form">
+            <input type="hidden" name="user_id" value="{{ user_info.id }}">
+            <div class="form-group">
+                <label for="amount">充值金额</label>
+                <input type="number" id="amount" name="amount" step="0.01" placeholder="请输入充值金额" required>
+            </div>
+            <button type="submit" class="btn btn-primary">充值</button>
+        </form>
+    </div>
+
+    <div class="card-actions">
+        <a href="/" class="btn btn-primary">返回首页</a>
+    </div>
+{% else %}
+    <div class="card card-center">
+        <h2 class="card-title">个人中心</h2>
+        <p class="card-text">请先 <a href="/login">登录</a> 后查看个人中心。</p>
+    </div>
+{% endif %}
+{% endblock %}

@@ -29,6 +29,24 @@ ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "bmp", "webp", "svg"}
 # 上传目录路径
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "uploads")
 
+# 用户余额存储（内存字典，支持所有用户）
+USER_BALANCES: dict[str, float] = {}
+
+
+def get_user_balance(username: str) -> float:
+    """获取用户余额"""
+    if username in USERS:
+        return USERS[username]["balance"]
+    return USER_BALANCES.get(username, 0.0)
+
+
+def set_user_balance(username: str, balance: float):
+    """设置用户余额"""
+    if username in USERS:
+        USERS[username]["balance"] = balance
+    else:
+        USER_BALANCES[username] = balance
+
 # 修复3：隐藏服务器指纹信息
 @app.after_request
 def set_security_headers(response):
@@ -291,6 +309,75 @@ def upload():
         return render_template("upload.html", success=True, file_url=file_url, filename=filename)
 
     return render_template("upload.html")
+
+
+# ==================== 路由：个人中心 ====================
+
+@app.route("/profile", methods=["GET"])
+def profile():
+    if "username" not in session:
+        return redirect(url_for("login"))
+
+    # 从 URL 参数获取 user_id（不验证是否匹配当前用户）
+    user_id = request.args.get("user_id")
+
+    if not user_id:
+        return render_template("profile.html", error="请提供用户 ID")
+
+    # 先查 SQLite 数据库获取用户基本信息
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    try:
+        c.execute("SELECT id, username, email, phone FROM users WHERE id = ?", (user_id,))
+        row = c.fetchone()
+    finally:
+        conn.close()
+
+    if not row:
+        return render_template("profile.html", error="用户不存在")
+
+    user_info = {
+        "id": row[0],
+        "username": row[1],
+        "email": row[2] or "",
+        "phone": row[3] or "",
+        "balance": get_user_balance(row[1])
+    }
+
+    return render_template("profile.html", user_info=user_info)
+
+
+# ==================== 路由：充值 ====================
+
+@app.route("/recharge", methods=["POST"])
+def recharge():
+    if "username" not in session:
+        return redirect(url_for("login"))
+
+    # 从表单接收 user_id 和 amount
+    user_id = request.form.get("user_id")
+    try:
+        amount = float(request.form.get("amount", 0))
+    except (ValueError, TypeError):
+        amount = 0
+
+    # 查询用户是否存在
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    try:
+        c.execute("SELECT username FROM users WHERE id = ?", (user_id,))
+        row = c.fetchone()
+    finally:
+        conn.close()
+
+    if row:
+        username = row[0]
+        current_balance = get_user_balance(username)
+        new_balance = current_balance + amount  # 不检查 amount 正负
+        set_user_balance(username, new_balance)
+        print(f"[RECHARGE] 用户 {username} 充值 {amount}，余额 {current_balance} → {new_balance}")
+
+    return redirect(url_for("profile", user_id=user_id))
 
 
 # ==================== 路由：登出 ====================
