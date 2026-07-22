@@ -318,13 +318,15 @@ def profile():
     if "username" not in session:
         return redirect(url_for("login"))
 
-    # 从 URL 参数获取 user_id（不验证是否匹配当前用户）
+    current_username = session["username"]
+
+    # 从 URL 参数获取 user_id
     user_id = request.args.get("user_id")
 
     if not user_id:
         return render_template("profile.html", error="请提供用户 ID")
 
-    # 先查 SQLite 数据库获取用户基本信息
+    # 查询用户是否存在
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     try:
@@ -335,6 +337,10 @@ def profile():
 
     if not row:
         return render_template("profile.html", error="用户不存在")
+
+    # 修复水平越权：只能查看自己的资料
+    if row[1] != current_username:
+        return render_template("profile.html", error="无权查看其他用户的资料")
 
     user_info = {
         "id": row[0],
@@ -354,6 +360,8 @@ def recharge():
     if "username" not in session:
         return redirect(url_for("login"))
 
+    current_username = session["username"]
+
     # 从表单接收 user_id 和 amount
     user_id = request.form.get("user_id")
     try:
@@ -370,12 +378,22 @@ def recharge():
     finally:
         conn.close()
 
-    if row:
-        username = row[0]
-        current_balance = get_user_balance(username)
-        new_balance = current_balance + amount  # 不检查 amount 正负
-        set_user_balance(username, new_balance)
-        print(f"[RECHARGE] 用户 {username} 充值 {amount}，余额 {current_balance} → {new_balance}")
+    if not row:
+        return redirect(url_for("profile", user_id=user_id))
+
+    # 修复水平越权：只能给自己充值
+    if row[0] != current_username:
+        return render_template("profile.html", error="无权操作其他用户的账户")
+
+    # 修复业务逻辑：金额必须为正数
+    if amount <= 0:
+        return render_template("profile.html", error="充值金额必须大于 0")
+
+    username = row[0]
+    current_balance = get_user_balance(username)
+    new_balance = current_balance + amount
+    set_user_balance(username, new_balance)
+    print(f"[RECHARGE] 用户 {username} 充值 {amount}，余额 {current_balance} → {new_balance}")
 
     return redirect(url_for("profile", user_id=user_id))
 
