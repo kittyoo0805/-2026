@@ -328,6 +328,38 @@ body {
     margin-top: 12px;
 }
 
+/* ===== Page Content ===== */
+.page-content {
+    line-height: 1.8;
+    color: #333;
+}
+
+.page-content h1 {
+    font-size: 1.5rem;
+    color: #667eea;
+    border-bottom: 2px solid #667eea;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+}
+
+.page-content h2 {
+    font-size: 1.15rem;
+    color: #764ba2;
+    margin-top: 20px;
+    margin-bottom: 8px;
+}
+
+.page-content p {
+    margin-bottom: 10px;
+}
+
+.page-content code {
+    background: #f4f4f4;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
 .form-group input[type="file"] {
     padding: 8px;
     border: 1px dashed #d9d9d9;

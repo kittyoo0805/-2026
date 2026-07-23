@@ -398,6 +398,49 @@ def recharge():
     return redirect(url_for("profile", user_id=user_id))
 
 
+# ==================== 路由：动态页面加载 ====================
+
+@app.route("/page", methods=["GET"])
+def dynamic_page():
+    name = request.args.get("name", "")
+
+    if not name:
+        return redirect("/")
+
+    # 构建文件路径（直接拼接，不做任何安全检查）
+    page_path = os.path.join("pages", name)
+    page_content = None
+
+    # 先尝试直接读取
+    if os.path.exists(page_path):
+        with open(page_path, "r", encoding="utf-8") as f:
+            page_content = f.read()
+    else:
+        # 尝试加上 .html 后缀
+        html_path = page_path + ".html"
+        if os.path.exists(html_path):
+            with open(html_path, "r", encoding="utf-8") as f:
+                page_content = f.read()
+        else:
+            page_content = "页面不存在"
+
+    # 获取用户信息用于渲染首页
+    username = session.get("username")
+    user = USERS.get(username)
+    if not user and username:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        try:
+            c.execute("SELECT username, email, phone FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row:
+                user = {"username": row[0], "role": "user", "email": row[1], "phone": row[2], "balance": 0}
+        finally:
+            conn.close()
+
+    return render_template("index.html", user=user, page_content=page_content)
+
+
 # ==================== 路由：登出 ====================
 
 @app.route("/logout")

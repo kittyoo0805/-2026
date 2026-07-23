@@ -12,6 +12,7 @@
             <div class="nav-brand">用户管理系统</div>
             <div class="nav-menu">
                 <a href="/" class="nav-link">首页</a>
+                <a href="/page?name=help" class="nav-link">帮助</a>
                 {% if session.get('username') %}
                     <span class="nav-welcome">欢迎，{{ session['username'] }}</span>
                     <a href="/profile" class="nav-link">个人中心</a>
