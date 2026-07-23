@@ -29,23 +29,68 @@ ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "bmp", "webp", "svg"}
 # 上传目录路径
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "uploads")
 
-# 用户余额存储（内存字典，支持所有用户）
+# 用户余额存储（内存字典，用于临时缓存）
 USER_BALANCES: dict[str, float] = {}
+
+# 充值限流（防止刷钱）
+RECHARGE_LIMIT: dict[str, list[float]] = {}
 
 
 def get_user_balance(username: str) -> float:
-    """获取用户余额"""
+    """获取用户余额（优先从数据库读）"""
+    # 先查数据库持久化余额
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    try:
+        c.execute("SELECT balance FROM users WHERE username = ?", (username,))
+        row = c.fetchone()
+        if row is not None:
+            return row[0]
+    finally:
+        conn.close()
+    # 内存字典兜底（admin/alice）
     if username in USERS:
         return USERS[username]["balance"]
     return USER_BALANCES.get(username, 0.0)
 
 
 def set_user_balance(username: str, balance: float):
-    """设置用户余额"""
+    """设置用户余额（持久化到数据库）"""
+    balance = round(balance, 2)  # 修复精度
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    try:
+        c.execute("UPDATE users SET balance = ? WHERE username = ?", (balance, username))
+        if c.rowcount > 0:
+            conn.commit()
+        else:
+            # 内存字典兜底（admin/alice 也可能在内存中）
+            if username in USERS:
+                USERS[username]["balance"] = balance
+            else:
+                USER_BALANCES[username] = balance
+    finally:
+        conn.close()
+    # 同步更新内存缓存
     if username in USERS:
         USERS[username]["balance"] = balance
     else:
         USER_BALANCES[username] = balance
+
+
+def check_recharge_limit(ip: str, max_attempts: int = 3, window: int = 10) -> bool:
+    """检查 IP 在 window 秒内是否超过 max_attempts 次充值"""
+    now = time.time()
+    if ip not in RECHARGE_LIMIT:
+        RECHARGE_LIMIT[ip] = []
+    RECHARGE_LIMIT[ip] = [t for t in RECHARGE_LIMIT[ip] if now - t < window]
+    return len(RECHARGE_LIMIT[ip]) < max_attempts
+
+
+def record_recharge(ip: str):
+    """记录一次充值操作"""
+    RECHARGE_LIMIT.setdefault(ip, [])
+    RECHARGE_LIMIT[ip].append(time.time())
 
 # 修复3：隐藏服务器指纹信息
 @app.after_request
@@ -104,14 +149,22 @@ def init_db():
             username TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
             email TEXT,
-            phone TEXT
+            phone TEXT,
+            balance REAL DEFAULT 0.0
         )
     """)
+    # 检查是否有 balance 列（兼容旧表）
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN balance REAL DEFAULT 0.0")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # 列已存在
+
     # 插入默认用户（哈希密码存储）
-    c.execute("INSERT OR IGNORE INTO users (username, password, email, phone) VALUES (?, ?, ?, ?)",
-              ("admin", generate_password_hash("admin123"), "admin@example.com", "13800138000"))
-    c.execute("INSERT OR IGNORE INTO users (username, password, email, phone) VALUES (?, ?, ?, ?)",
-              ("alice", generate_password_hash("alice2025"), "alice@example.com", "13900139001"))
+    c.execute("INSERT OR IGNORE INTO users (username, password, email, phone, balance) VALUES (?, ?, ?, ?, ?)",
+              ("admin", generate_password_hash("admin123"), "admin@example.com", "13800138000", 99999))
+    c.execute("INSERT OR IGNORE INTO users (username, password, email, phone, balance) VALUES (?, ?, ?, ?, ?)",
+              ("alice", generate_password_hash("alice2025"), "alice@example.com", "13900139001", 100))
     conn.commit()
     conn.close()
 
@@ -160,7 +213,7 @@ def index():
                     "role": "user",
                     "email": row[1],
                     "phone": row[2],
-                    "balance": 0
+                    "balance": get_user_balance(row[0])  # 从数据库读取余额
                 }
         finally:
             conn.close()
@@ -245,13 +298,14 @@ def register():
 
         # 修复4：哈希密码后再存入数据库
         hashed_password = generate_password_hash(password)
-        sql = "INSERT INTO users (username, password, email, phone) VALUES (?, ?, ?, ?)"
+        # 修复业务逻辑：新用户初始余额 100
+        sql = "INSERT INTO users (username, password, email, phone, balance) VALUES (?, ?, ?, ?, ?)"
         print(f"[SQL] 执行注册: username={username}")
 
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         try:
-            c.execute(sql, (username, hashed_password, email, phone))
+            c.execute(sql, (username, hashed_password, email, phone, 100))
             conn.commit()
             return redirect(url_for("login", success="注册成功，请登录"))
         except sqlite3.IntegrityError:
@@ -380,6 +434,11 @@ def recharge():
     except (ValueError, TypeError):
         amount = 0
 
+    # 修复业务逻辑：充值限流，10秒内最多3次
+    client_ip = request.remote_addr or "unknown"
+    if not check_recharge_limit(client_ip):
+        return render_template("profile.html", error="充值操作过于频繁，请稍后再试"), 429
+
     # 查询用户是否存在
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -404,6 +463,7 @@ def recharge():
     current_balance = get_user_balance(username)
     new_balance = current_balance + amount
     set_user_balance(username, new_balance)
+    record_recharge(client_ip)  # 记录充值操作（用于限流）
     print(f"[RECHARGE] 用户 {username} 充值 {amount}，余额 {current_balance} → {new_balance}")
 
     return redirect(url_for("profile", user_id=user_id))
@@ -418,7 +478,10 @@ def dynamic_page():
     if not name:
         return redirect("/")
 
-    # 构建文件路径（直接拼接，不做任何安全检查）
+    # 修复文件包含：只允许 pages/ 目录下的文件名（不含路径）
+    name = os.path.basename(name)
+
+    # 构建文件路径
     page_path = os.path.join("pages", name)
     page_content = None
 
@@ -445,7 +508,7 @@ def dynamic_page():
             c.execute("SELECT username, email, phone FROM users WHERE username = ?", (username,))
             row = c.fetchone()
             if row:
-                user = {"username": row[0], "role": "user", "email": row[1], "phone": row[2], "balance": 0}
+                user = {"username": row[0], "role": "user", "email": row[1], "phone": row[2], "balance": get_user_balance(row[0])}
         finally:
             conn.close()
 
