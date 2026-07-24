@@ -44,6 +44,7 @@
     <div class="card">
         <h2 class="card-title">充值</h2>
         <form method="POST" action="/recharge" class="login-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="user_id" value="{{ user_info.id }}">
             <div class="form-group">
                 <label for="amount">充值金额</label>
@@ -56,8 +57,13 @@
     <div class="card">
         <h2 class="card-title">修改密码</h2>
         <form method="POST" action="/change-password" class="login-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="username" value="{{ user_info.username }}">
             <input type="hidden" name="user_id" value="{{ user_info.id }}">
+            <div class="form-group">
+                <label for="old_password">原密码</label>
+                <input type="password" id="old_password" name="old_password" placeholder="请输入原密码" required>
+            </div>
             <div class="form-group">
                 <label for="new_password">新密码</label>
                 <input type="password" id="new_password" name="new_password" placeholder="请输入新密码" required>

@@ -2,6 +2,7 @@ import os
 import sqlite3
 import time
 import secrets
+import hashlib
 from flask import Flask, render_template, request, redirect, session, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -91,6 +92,23 @@ def record_recharge(ip: str):
     """记录一次充值操作"""
     RECHARGE_LIMIT.setdefault(ip, [])
     RECHARGE_LIMIT[ip].append(time.time())
+
+
+# ==================== CSRF 防护 ====================
+
+def generate_csrf_token() -> str:
+    """生成 CSRF Token 并存入 session"""
+    token = secrets.token_hex(16)
+    session["csrf_token"] = token
+    return token
+
+
+def validate_csrf_token() -> bool:
+    """验证 CSRF Token"""
+    token = request.form.get("csrf_token", "")
+    session_token = session.get("csrf_token", "")
+    return token and session_token and token == session_token
+
 
 # 修复3：隐藏服务器指纹信息
 @app.after_request
@@ -400,12 +418,9 @@ def profile():
     finally:
         conn.close()
 
-    if not row:
-        return render_template("profile.html", error="用户不存在")
-
-    # 修复水平越权：只能查看自己的资料
-    if row[1] != current_username:
-        return render_template("profile.html", error="无权查看其他用户的资料")
+    if not row or row[1] != current_username:
+        # 修复枚举：不区分"用户不存在"和"无权查看"，统一返回相同信息
+        return render_template("profile.html", error="无权查看该用户资料")
 
     user_info = {
         "id": row[0],
@@ -416,7 +431,8 @@ def profile():
     }
 
     success = request.args.get("success", "")
-    return render_template("profile.html", user_info=user_info, success=success)
+    token = generate_csrf_token()
+    return render_template("profile.html", user_info=user_info, success=success, csrf_token=token)
 
 
 # ==================== 路由：充值 ====================
@@ -428,6 +444,10 @@ def recharge():
 
     current_username = session["username"]
 
+    # 修复CSRF：验证 Token
+    if not validate_csrf_token():
+        return render_template("profile.html", error="请求已过期，请重试", csrf_token=generate_csrf_token())
+
     # 从表单接收 user_id 和 amount
     user_id = request.form.get("user_id")
     try:
@@ -438,7 +458,7 @@ def recharge():
     # 修复业务逻辑：充值限流，10秒内最多3次
     client_ip = request.remote_addr or "unknown"
     if not check_recharge_limit(client_ip):
-        return render_template("profile.html", error="充值操作过于频繁，请稍后再试"), 429
+        return render_template("profile.html", error="充值操作过于频繁，请稍后再试", csrf_token=generate_csrf_token()), 429
 
     # 查询用户是否存在
     conn = sqlite3.connect(DB_PATH)
@@ -454,11 +474,11 @@ def recharge():
 
     # 修复水平越权：只能给自己充值
     if row[0] != current_username:
-        return render_template("profile.html", error="无权操作其他用户的账户")
+        return render_template("profile.html", error="无权操作其他用户的账户", csrf_token=generate_csrf_token())
 
     # 修复业务逻辑：金额必须为正数
     if amount <= 0:
-        return render_template("profile.html", error="充值金额必须大于 0")
+        return render_template("profile.html", error="充值金额必须大于 0", csrf_token=generate_csrf_token())
 
     username = row[0]
     current_balance = get_user_balance(username)
@@ -523,13 +543,45 @@ def change_password():
     if "username" not in session:
         return redirect(url_for("login"))
 
+    current_username = session["username"]
+
+    # 修复CSRF：验证 Token
+    if not validate_csrf_token():
+        return render_template("profile.html", error="请求已过期，请重试", csrf_token=generate_csrf_token())
+
     username = request.form.get("username", "")
+    old_password = request.form.get("old_password", "")
     new_password = request.form.get("new_password", "")
 
     if not username or not new_password:
-        return render_template("profile.html", error="用户名和密码不能为空")
+        return render_template("profile.html", error="用户名和密码不能为空", csrf_token=generate_csrf_token())
 
-    # 更新密码（不验证原密码，不校验 session 是否匹配）
+    # 修复密码漏洞：只能修改自己的密码
+    if username != current_username:
+        return render_template("profile.html", error="无权修改其他用户的密码", csrf_token=generate_csrf_token())
+
+    # 修复密码漏洞：必须验证原密码
+    # 先查 USERS 字典（admin/alice）
+    user = USERS.get(username)
+    password_valid = False
+    if user and check_password_hash(user["password_hash"], old_password):
+        password_valid = True
+    else:
+        # 再查 SQLite 数据库（注册用户）
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        try:
+            c.execute("SELECT password FROM users WHERE username = ?", (username,))
+            row = c.fetchone()
+            if row and check_password_hash(row[0], old_password):
+                password_valid = True
+        finally:
+            conn.close()
+
+    if not password_valid:
+        return render_template("profile.html", error="原密码错误", csrf_token=generate_csrf_token())
+
+    # 更新密码
     hashed = generate_password_hash(new_password)
 
     # 先更新 SQLite 数据库
