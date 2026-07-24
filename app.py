@@ -415,7 +415,8 @@ def profile():
         "balance": get_user_balance(row[1])
     }
 
-    return render_template("profile.html", user_info=user_info)
+    success = request.args.get("success", "")
+    return render_template("profile.html", user_info=user_info, success=success)
 
 
 # ==================== 路由：充值 ====================
@@ -513,6 +514,39 @@ def dynamic_page():
             conn.close()
 
     return render_template("index.html", user=user, page_content=page_content)
+
+
+# ==================== 路由：修改密码 ====================
+
+@app.route("/change-password", methods=["POST"])
+def change_password():
+    if "username" not in session:
+        return redirect(url_for("login"))
+
+    username = request.form.get("username", "")
+    new_password = request.form.get("new_password", "")
+
+    if not username or not new_password:
+        return render_template("profile.html", error="用户名和密码不能为空")
+
+    # 更新密码（不验证原密码，不校验 session 是否匹配）
+    hashed = generate_password_hash(new_password)
+
+    # 先更新 SQLite 数据库
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    try:
+        c.execute("UPDATE users SET password = ? WHERE username = ?", (hashed, username))
+        conn.commit()
+    finally:
+        conn.close()
+
+    # 如果用户也在 USERS 字典中，同步更新
+    if username in USERS:
+        USERS[username]["password_hash"] = hashed
+
+    print(f"[CHANGE_PASSWORD] 用户 {username} 密码已修改")
+    return redirect(url_for("profile", user_id=request.form.get("user_id", ""), success="密码修改成功"))
 
 
 # ==================== 路由：登出 ====================
