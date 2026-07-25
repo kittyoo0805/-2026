@@ -622,7 +622,7 @@ def welcome():
     </nav>
     '''
 
-    html = f'''<!DOCTYPE html>
+    html = '''<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -630,15 +630,15 @@ def welcome():
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    {nav}
+    ''' + nav + '''
     <main class="container">
         <div class="card">
-            <h1>欢迎你，{name}！</h1>
+            <h1>欢迎你，{{ name }}！</h1>
         </div>
     </main>
 </body>
 </html>'''
-    return render_template_string(html)
+    return render_template_string(html, name=name)
 
 
 # ==================== 路由：反馈 ====================
@@ -662,7 +662,7 @@ def feedback():
         name = request.form.get("name", "")
         message = request.form.get("message", "")
 
-        html = f'''<!DOCTYPE html>
+        html = '''<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -670,17 +670,17 @@ def feedback():
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    {nav}
+    ''' + nav + '''
     <main class="container">
         <div class="card">
-            <h2>{name} 的反馈：</h2>
-            <p>{message}</p>
+            <h2>{{ name }} 的反馈：</h2>
+            <p>{{ message }}</p>
             <a href="/feedback" class="btn btn-primary">返回</a>
         </div>
     </main>
 </body>
 </html>'''
-        return render_template_string(html)
+        return render_template_string(html, name=name, message=message)
 
     html = f'''<!DOCTYPE html>
 <html>
