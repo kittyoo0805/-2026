@@ -3,7 +3,7 @@ import sqlite3
 import time
 import secrets
 import hashlib
-from flask import Flask, render_template, request, redirect, session, url_for
+from flask import Flask, render_template, request, redirect, session, url_for, render_template_string
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
@@ -599,6 +599,117 @@ def change_password():
 
     print(f"[CHANGE_PASSWORD] 用户 {username} 密码已修改")
     return redirect(url_for("profile", user_id=request.form.get("user_id", ""), success="密码修改成功"))
+
+
+# ==================== 路由：欢迎页 ====================
+
+@app.route("/welcome", methods=["GET"])
+def welcome():
+    name = request.args.get("name", "")
+    if not name:
+        name = "亲爱的用户"
+
+    nav = '''
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">用户管理系统</div>
+            <div class="nav-menu">
+                <a href="/" class="nav-link">首页</a>
+                <a href="/welcome" class="nav-link">欢迎页</a>
+                <a href="/feedback" class="nav-link">反馈</a>
+            </div>
+        </div>
+    </nav>
+    '''
+
+    html = f'''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>欢迎页</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    {nav}
+    <main class="container">
+        <div class="card">
+            <h1>欢迎你，{name}！</h1>
+        </div>
+    </main>
+</body>
+</html>'''
+    return render_template_string(html)
+
+
+# ==================== 路由：反馈 ====================
+
+@app.route("/feedback", methods=["GET", "POST"])
+def feedback():
+    nav = '''
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">用户管理系统</div>
+            <div class="nav-menu">
+                <a href="/" class="nav-link">首页</a>
+                <a href="/welcome" class="nav-link">欢迎页</a>
+                <a href="/feedback" class="nav-link">反馈</a>
+            </div>
+        </div>
+    </nav>
+    '''
+
+    if request.method == "POST":
+        name = request.form.get("name", "")
+        message = request.form.get("message", "")
+
+        html = f'''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>反馈结果</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    {nav}
+    <main class="container">
+        <div class="card">
+            <h2>{name} 的反馈：</h2>
+            <p>{message}</p>
+            <a href="/feedback" class="btn btn-primary">返回</a>
+        </div>
+    </main>
+</body>
+</html>'''
+        return render_template_string(html)
+
+    html = f'''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>用户反馈</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    {nav}
+    <main class="container">
+        <div class="card">
+            <h2 class="card-title">用户反馈</h2>
+            <form method="POST" action="/feedback" class="login-form">
+                <div class="form-group">
+                    <label for="name">姓名</label>
+                    <input type="text" id="name" name="name" placeholder="请输入您的姓名" required>
+                </div>
+                <div class="form-group">
+                    <label for="message">留言</label>
+                    <textarea id="message" name="message" rows="5" placeholder="请输入您的反馈内容" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">提交反馈</button>
+            </form>
+        </div>
+    </main>
+</body>
+</html>'''
+    return render_template_string(html)
 
 
 # ==================== 路由：登出 ====================
