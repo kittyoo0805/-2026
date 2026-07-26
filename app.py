@@ -684,7 +684,7 @@ def feedback():
 </html>'''
         return render_template_string(html, name=name, message=message)
 
-    html = f'''<!DOCTYPE html>
+    html = '''<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -692,7 +692,7 @@ def feedback():
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    {nav}
+    {{ nav }}
     <main class="container">
         <div class="card">
             <h2 class="card-title">用户反馈</h2>
@@ -711,7 +711,7 @@ def feedback():
     </main>
 </body>
 </html>'''
-    return render_template_string(html)
+    return render_template_string(html, nav=nav)
 
 
 # ==================== 路由：Ping 网络诊断 ====================
@@ -725,17 +725,22 @@ def ping():
     ip = ""
 
     if request.method == "POST":
-        ip = request.form.get("ip", "")
-        try:
-            # 使用字符串拼接构建系统命令，不校验 ip 参数
-            cmd = f"ping -c 3 {ip}"
-            result = subprocess.check_output(cmd, shell=True, timeout=30, stderr=subprocess.STDOUT).decode("utf-8", errors="replace")
-        except subprocess.CalledProcessError as e:
-            result = e.output.decode("utf-8", errors="replace") if e.output else "命令执行失败"
-        except subprocess.TimeoutExpired:
-            result = "Ping 请求超时"
-        except Exception as e:
-            result = f"执行出错: {e}"
+        ip = request.form.get("ip", "").strip()
+        # 修复 Shell 注入：验证 IP 地址或域名格式
+        import re
+        if not re.match(r'^[a-zA-Z0-9.\-_:]+$', ip):
+            result = "无效的 IP 地址或域名格式"
+        else:
+            try:
+                # 使用参数列表而非 shell=True，防止命令注入
+                cmd = ["ping", "-c", "3", ip]
+                result = subprocess.check_output(cmd, timeout=30, stderr=subprocess.STDOUT).decode("utf-8", errors="replace")
+            except subprocess.CalledProcessError as e:
+                result = e.output.decode("utf-8", errors="replace") if e.output else "Ping 失败"
+            except subprocess.TimeoutExpired:
+                result = "Ping 请求超时"
+            except Exception as e:
+                result = f"执行出错: {e}"
 
     return render_template("ping.html", result=result, ip=ip)
 
