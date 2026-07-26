@@ -372,3 +372,30 @@ body {
     border-color: #667eea;
     background: #f0f2ff;
 }
+
+/* ===== Ping ===== */
+.ping-result {
+    margin-top: 20px;
+}
+
+.ping-header {
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+}
+
+.ping-output {
+    background: #1e1e1e;
+    color: #00ff00;
+    font-family: "Courier New", monospace;
+    font-size: 0.85rem;
+    padding: 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    line-height: 1.5;
+    max-height: 400px;
+    overflow-y: auto;
+}
